@@ -1,17 +1,35 @@
+import com.cloudera.sparkts.HourFrequency;
+import com.cloudera.sparkts.TimeSeriesRDD;
+import com.cloudera.sparkts.UniformDateTimeIndex;
+import com.cloudera.sparkts.api.java.JavaTimeSeriesRDD;
+import com.cloudera.sparkts.api.java.JavaTimeSeriesRDDFactory;
+import com.cloudera.sparkts.models.HoltWinters;
+import com.cloudera.sparkts.models.HoltWintersModel;
+import com.cloudera.sparkts.models.TimeSeriesModel;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import org.apache.spark.SparkConf;
+import org.apache.spark.SparkContext;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.StorageLevels;
+import org.apache.spark.mllib.linalg.Vector;
+import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import scala.Tuple2;
+import scala.Tuple3;
+import scala.collection.mutable.ArrayBuffer;
 
 import java.io.IOException;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 public class PM2P5R {
     //    private static final Pattern SPACE = Pattern.compile(" ");
@@ -103,6 +121,23 @@ public class PM2P5R {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+
+    /**
+     * 使用Holt-Winter模型对时间序列进行你和
+     *
+     * @param ts         time series, 按时间排列的属性值，本项目中为pm2.5
+     * @param predictedN 预测值的个数
+     * @return 按顺序排列的预测值
+     */
+    private Vector forecast(Vector ts, int predictedN) {
+
+        HoltWintersModel model = HoltWinters.fitModelWithBOBYQA(ts, 24, "additive");
+        Vector dest = Vectors.zeros(predictedN);
+        model.forecast(ts, dest);
+
+        return dest;
     }
 
 
