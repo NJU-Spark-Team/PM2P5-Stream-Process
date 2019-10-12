@@ -7,10 +7,7 @@ import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
 
-import java.net.URI;
 import java.time.format.DateTimeFormatter;
 import java.util.regex.Pattern;
 
@@ -18,7 +15,7 @@ public class PM2P5R {
     private static final Pattern SPACE = Pattern.compile(" ");
     private static final String[] fileName = new String[]{"Beijing_c", "Shanghai_c", "Guangzhou_c", "Chengdu_c", "Shenyang_c"};
     private static final String filePath = "/home/nosolution/Sundry/PM2.5 Data of Five Chinese Cities";
-    private static WebSocketClient client;
+//    private static WebSocketClient client;
 
     public static void main(String[] args) throws Exception {
         if (args.length < 4) {
@@ -26,29 +23,6 @@ public class PM2P5R {
             System.exit(1);
         }
 
-        //websocket connect to dest host
-        client = new WebSocketClient(new URI(args[2] + ":" + args[3] + "/pm/websocket")) {
-            @Override
-            public void onOpen(ServerHandshake serverHandshake) {
-                System.out.println("opened connection");
-            }
-
-            @Override
-            public void onMessage(String s) {
-                System.out.println(s);
-            }
-
-            @Override
-            public void onClose(int i, String s, boolean b) {
-                System.out.println("closed connection");
-            }
-
-            @Override
-            public void onError(Exception e) {
-                e.printStackTrace();
-            }
-        };
-        client.connect();
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH");
 
@@ -81,10 +55,10 @@ public class PM2P5R {
                     "average pm2.5": number
                 }
                  */
-                String output = String.format("{ \"time\":\"%s\",  \"city name\":\"%s\", \"temperature\":%d, \"humidity\":%d, \"pm2.5\":%d, \"average pm2.5\":%f}\n",
+                String output = String.format("{ \"time\":\"%s\",  \"city name\":\"%s\", \"temperature\":%d, \"humidity\":%d, \"pm2.5\":%d, \"average pm2.5\":%f}",
                         formatter.format(record.getTime()), record.getName(), record.getTemp(), record.getHumi(), record.getPm(), pmAverage.value());
                 //<deliver the output line to server>
-                client.send(output);
+                System.out.println(output);
             });
         });
 
