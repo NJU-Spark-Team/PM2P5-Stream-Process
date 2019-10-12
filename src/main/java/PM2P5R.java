@@ -1,21 +1,23 @@
-import component.AverageAccumulator;
-import entity.Record;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.StorageLevels;
 import org.apache.spark.streaming.Durations;
-import org.apache.spark.streaming.api.java.JavaDStream;
+import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
-import org.codehaus.jackson.map.ObjectMapper;
+import scala.Tuple2;
 
+import java.io.IOException;
 import java.time.format.DateTimeFormatter;
-import java.util.regex.Pattern;
 
 public class PM2P5R {
-    private static final Pattern SPACE = Pattern.compile(" ");
-    private static final String[] fileName = new String[]{"Beijing_c", "Shanghai_c", "Guangzhou_c", "Chengdu_c", "Shenyang_c"};
-    private static final String filePath = "/home/nosolution/Sundry/PM2.5 Data of Five Chinese Cities";
-//    private static WebSocketClient client;
+    //    private static final Pattern SPACE = Pattern.compile(" ");
+//    private static final String[] fileName = new String[]{"Beijing_c", "Shanghai_c", "Guangzhou_c", "Chengdu_c", "Shenyang_c"};
+//    private static final String filePath = "file:///home/nosolution/Sundry/PM2.5 Data of Five Chinese Cities";
+    private static OkHttpClient client;
 
     public static void main(String[] args) throws Exception {
         if (args.length < 4) {
@@ -23,6 +25,8 @@ public class PM2P5R {
             System.exit(1);
         }
 
+        client = new OkHttpClient();
+        final String url = "http://" + args[2] + ":" + args[3] + "/submit";
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH");
 
@@ -34,16 +38,29 @@ public class PM2P5R {
         JavaReceiverInputDStream<String> lines = ssc.socketTextStream(
                 args[0], Integer.parseInt(args[1]), StorageLevels.MEMORY_AND_DISK_SER);
 
-        JavaDStream<Record> records = lines.map(line -> {
-            ObjectMapper mapper = new ObjectMapper();
-            return mapper.readValue(line, Record.class);
+//        JavaDStream<String> lines = ssc.textFileStream(filePath + "/test.txt" );
+
+//        JavaDStream<Record> records = lines.map(line -> {
+//            ObjectMapper mapper = new ObjectMapper();
+//            System.out.println(line);
+//            return mapper.readValue(line, Record.class);
+//        });
+
+
+        JavaPairDStream<String, Integer> m = lines.mapToPair(line -> new Tuple2<>(line, 1));
+
+        m.foreachRDD(rdd -> {
+            rdd.foreach(p -> {
+                System.out.println("a");
+            });
+
         });
 
-        AverageAccumulator pmAverage = new AverageAccumulator();
 
-        records.foreachRDD(rdd -> {
-            rdd.foreach(record -> {
-                pmAverage.add((double) record.getPm());
+//        m.foreachRDD(rdd -> {
+//            if (!rdd.isEmpty()) {
+//                rdd.foreach(line -> {
+//                pmAverage.add((double) record.getPm());
                 /*
                 json format:
                 {
@@ -55,22 +72,38 @@ public class PM2P5R {
                     "average pm2.5": number
                 }
                  */
-                String output = String.format("{ \"time\":\"%s\",  \"city name\":\"%s\", \"temperature\":%d, \"humidity\":%d, \"pm2.5\":%d, \"average pm2.5\":%f}",
-                        formatter.format(record.getTime()), record.getName(), record.getTemp(), record.getHumi(), record.getPm(), pmAverage.value());
-                //<deliver the output line to server>
-                System.out.println(output);
-            });
-        });
+//                String output = String.format("{ \"time\":\"%s\",  \"city name\":\"%s\", \"temperature\":%d, \"humidity\":%d, \"pm2.5\":%d, \"average pm2.5\":%f}",
+//                        formatter.format(record.getTime()), record.getName(), record.getTemp(), record.getHumi(), record.getPm(), pmAverage.value());
+        //<deliver the output line to server>
+//                });
+//
+//            }
+//        });
+
+        ssc.start();
+        ssc.awaitTermination();
 
 
     }
 
-//    public void toTSRDD(Map<String, String> dataset, String start, String end) {
-//        ZoneId defaultZone = ZoneId.systemDefault();
-//        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-M-d H").withZone(defaultZone);
-//        ZonedDateTime startDT = ZonedDateTime.parse(start, formatter);
-//        ZonedDateTime endDT = ZonedDateTime.parse(end, formatter);
-//
-//        UniformDateTimeIndex dateTimeIndex = DateTimeIndexFactory.uniform(startDT, endDT, new HourFrequency(1), defaultZone);
-//    }
+    /**
+     * post method to server
+     *
+     * @param url     dest url
+     * @param jsonStr String representation of json object
+     */
+    private void post(String url, String jsonStr) {
+        RequestBody body = RequestBody.create(jsonStr, MediaType.parse("application/json; charset=utf-8"));
+        Request request = new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+        try {
+            client.newCall(request).execute();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
 }
