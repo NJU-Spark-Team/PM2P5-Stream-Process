@@ -11,6 +11,8 @@ import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.atomic.DoubleAccumulator;
+import java.util.concurrent.atomic.LongAccumulator;
 import java.util.regex.Pattern;
 
 public class PM2P5R {
@@ -64,13 +66,11 @@ public class PM2P5R {
             return mapper.readValue(line, Record.class);
         });
 
-        int[] count = new int[1];
-        double[] pmAverage = new double[2];
+        DoubleAccumulator pmAverage = ssc.sc().doubleAccumulator();
 
         records.foreachRDD(rdd -> {
             rdd.foreach(record -> {
-                pmAverage[0] = (count[0] * pmAverage[0] + record.getPm()) / count[0];
-                count[0] += 1;
+                pmAverage.add(record.getPm());
                 /*
                 json format:
                 {
@@ -83,7 +83,7 @@ public class PM2P5R {
                 }
                  */
                 String output = String.format("{ \"time\":\"%s\",  \"city name\":\"%s\", \"temperature\":%d, \"humidity\":%d, \"pm2.5\":%d, \"average pm2.5\":%f}\n",
-                        formatter.format(record.getTime()), record.getName(), record.getTemp(), record.getHumi(), record.getPm(), pmAverage[0]);
+                        formatter.format(record.getTime()), record.getName(), record.getTemp(), record.getHumi(), record.getPm(), pmAverage.get());
                 //<deliver the output line to server>
                 client.send(output);
             });
