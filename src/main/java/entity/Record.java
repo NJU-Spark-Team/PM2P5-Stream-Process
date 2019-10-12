@@ -5,9 +5,16 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+
+/**
+ * data entity for pn2.5 record
+ *
+ * @author Nosolution
+ * @version 1.0
+ * @since 2019/10/10
+ */
 @Data
 @NoArgsConstructor
-//PM2.5 record
 public class Record {
     LocalDateTime time;
     String name;

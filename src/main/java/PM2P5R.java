@@ -1,3 +1,4 @@
+import component.AverageAccumulator;
 import entity.Record;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.StorageLevels;
@@ -11,8 +12,6 @@ import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.atomic.DoubleAccumulator;
-import java.util.concurrent.atomic.LongAccumulator;
 import java.util.regex.Pattern;
 
 public class PM2P5R {
@@ -66,11 +65,11 @@ public class PM2P5R {
             return mapper.readValue(line, Record.class);
         });
 
-        DoubleAccumulator pmAverage = ssc.sc().doubleAccumulator();
+        AverageAccumulator pmAverage = new AverageAccumulator();
 
         records.foreachRDD(rdd -> {
             rdd.foreach(record -> {
-                pmAverage.add(record.getPm());
+                pmAverage.add((double) record.getPm());
                 /*
                 json format:
                 {
@@ -83,7 +82,7 @@ public class PM2P5R {
                 }
                  */
                 String output = String.format("{ \"time\":\"%s\",  \"city name\":\"%s\", \"temperature\":%d, \"humidity\":%d, \"pm2.5\":%d, \"average pm2.5\":%f}\n",
-                        formatter.format(record.getTime()), record.getName(), record.getTemp(), record.getHumi(), record.getPm(), pmAverage.get());
+                        formatter.format(record.getTime()), record.getName(), record.getTemp(), record.getHumi(), record.getPm(), pmAverage.value());
                 //<deliver the output line to server>
                 client.send(output);
             });
