@@ -1,19 +1,10 @@
-import com.cloudera.sparkts.HourFrequency;
-import com.cloudera.sparkts.TimeSeriesRDD;
-import com.cloudera.sparkts.UniformDateTimeIndex;
-import com.cloudera.sparkts.api.java.JavaTimeSeriesRDD;
-import com.cloudera.sparkts.api.java.JavaTimeSeriesRDDFactory;
 import com.cloudera.sparkts.models.HoltWinters;
 import com.cloudera.sparkts.models.HoltWintersModel;
-import com.cloudera.sparkts.models.TimeSeriesModel;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import org.apache.spark.SparkConf;
-import org.apache.spark.SparkContext;
-import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.StorageLevels;
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
@@ -22,16 +13,11 @@ import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaReceiverInputDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import scala.Tuple2;
-import scala.Tuple3;
-import scala.collection.mutable.ArrayBuffer;
 
 import java.io.IOException;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
-public class PM2P5R {
+public class PM2P5S {
     //    private static final Pattern SPACE = Pattern.compile(" ");
 //    private static final String[] fileName = new String[]{"Beijing_c", "Shanghai_c", "Guangzhou_c", "Chengdu_c", "Shenyang_c"};
 //    private static final String filePath = "file:///home/nosolution/Sundry/PM2.5 Data of Five Chinese Cities";
@@ -39,7 +25,7 @@ public class PM2P5R {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 4) {
-            System.err.println("Usage: PM2P5R <source-hostname> <source-port>  <dest-hostname> <dest-port>");
+            System.err.println("Usage: pm2p5s <source-hostname> <source-port>  <dest-hostname> <dest-port>");
             System.exit(1);
         }
 
@@ -49,7 +35,7 @@ public class PM2P5R {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH");
 
         // Create the context with a 1 second batch size
-        SparkConf sparkConf = new SparkConf().setAppName("PM2P5R");
+        SparkConf sparkConf = new SparkConf().setAppName("PM2P5R").setMaster("local[4]");
         JavaStreamingContext ssc = new JavaStreamingContext(sparkConf, Durations.seconds(1));
 
         // Create a JavaReceiverInputDStream on target ip:port and count the
